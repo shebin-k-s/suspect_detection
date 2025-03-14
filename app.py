@@ -401,7 +401,7 @@ def upload_video():
     video_path = os.path.join(UPLOAD_FOLDER, secure_filename(file.filename))
     file.save(video_path)
 
-     try:
+    try:
         result = mark_suspects(video_path, device_id)
     finally:
         if os.path.exists(video_path):
