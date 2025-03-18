@@ -16,7 +16,7 @@ UPLOAD_FOLDER = 'uploads'
 MARKED_IMAGES = 'marked_images'
 DB_PATH = 'database'
 TEMP_FOLDER = 'temp_faces'
-FRAME_SKIP = 30
+FRAME_SKIP = 20
 MODEL_NAME = 'VGG-Face'
 CONFIDENCE_THRESHOLD = 0.25
 DISTANCE_THRESHOLD = 0.80
@@ -168,6 +168,15 @@ def verify_match(face_path, suspect_path, threshold=DISTANCE_THRESHOLD):
         logger.error(f"Verification error: {e}")
         return False, 0
 
+def rotate_image(image, angle):
+    """Rotate the given image by the specified angle."""
+    (h, w) = image.shape[:2]
+    center = (w // 2, h // 2)
+    
+    rotation_matrix = cv2.getRotationMatrix2D(center, angle, 1.0)
+    rotated = cv2.warpAffine(image, rotation_matrix, (w, h))
+    
+    return rotated
 def mark_suspects(video_path, device_id):
     """Detects faces in a video and checks against the suspect database."""
     # Normalize device_id to lowercase for consistency
@@ -200,6 +209,8 @@ def mark_suspects(video_path, device_id):
         ret, frame = cap.read()
         if not ret:
             break
+       
+        frame = cv2.rotate(frame, cv2.ROTATE_90_CLOCKWISE) 
 
         frame_count += 1
 
@@ -211,6 +222,7 @@ def mark_suspects(video_path, device_id):
         if processed_frames % 10 == 0:
             logger.info(f"Processing frame {frame_count}/{total_frames} ({frame_count/total_frames*100:.1f}%)")
 
+        
         marked_frame = frame.copy()
         frame_suspects = {}
 
