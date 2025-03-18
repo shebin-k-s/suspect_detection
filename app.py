@@ -16,7 +16,7 @@ UPLOAD_FOLDER = 'uploads'
 MARKED_IMAGES = 'marked_images'
 DB_PATH = 'database'
 TEMP_FOLDER = 'temp_faces'
-FRAME_SKIP = 20
+FRAME_SKIP = 30
 MODEL_NAME = 'VGG-Face'
 CONFIDENCE_THRESHOLD = 0.25
 DISTANCE_THRESHOLD = 0.80
@@ -168,15 +168,16 @@ def verify_match(face_path, suspect_path, threshold=DISTANCE_THRESHOLD):
         logger.error(f"Verification error: {e}")
         return False, 0
 
-def rotate_image(image, angle):
-    """Rotate the given image by the specified angle."""
-    (h, w) = image.shape[:2]
-    center = (w // 2, h // 2)
+def should_rotate_frame(frame):
+    """Determine whether the frame needs rotation based on aspect ratio and face detection."""
+    height, width = frame.shape[:2]
+
+    # Check if the frame is in portrait mode (height > width)
+    if height < width:
+        return True
     
-    rotation_matrix = cv2.getRotationMatrix2D(center, angle, 1.0)
-    rotated = cv2.warpAffine(image, rotation_matrix, (w, h))
-    
-    return rotated
+    return False
+
 def mark_suspects(video_path, device_id):
     """Detects faces in a video and checks against the suspect database."""
     # Normalize device_id to lowercase for consistency
@@ -205,12 +206,19 @@ def mark_suspects(video_path, device_id):
     logger.info(f"Processing video with {total_frames} frames at {fps} FPS (analyzing every {FRAME_SKIP}th frame)")
     logger.info(f"Database contains {len(suspect_names)} suspects: {', '.join(suspect_names)}")
 
+    rotate = None
     while cap.isOpened():
         ret, frame = cap.read()
         if not ret:
             break
        
-        frame = cv2.rotate(frame, cv2.ROTATE_90_CLOCKWISE) 
+        if rotate is None:
+            rotate = should_rotate_frame(frame)
+            logger.info(f"Auto-detected rotation: {'Yes' if rotate else 'No'}")
+
+        # Apply rotation if required
+        if rotate:
+            frame = cv2.rotate(frame, cv2.ROTATE_90_CLOCKWISE)
 
         frame_count += 1
 
